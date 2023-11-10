@@ -122,7 +122,8 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
         matcher = pattern.matcher(message);
         if (matcher.matches()) {
             String notificationText = matcher.group(3);
-            LocalDateTime dateTime = LocalDateTime.parse(matcher.group(1), DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"));
+            LocalDateTime dateTime = LocalDateTime.parse(matcher.group(1), DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+                    .truncatedTo(ChronoUnit.MINUTES);
             notificationRepository.save(new NotificationEntity(id, notificationText, dateTime));
             logger.info("New record has been created in database:" +
                     " \nID: " + id + "\nDate and Time: " + dateTime + "\nMessage: " + notificationText + "\n");
@@ -142,18 +143,5 @@ public class TelegramBotUpdatesListener implements UpdatesListener {
         } else {
             logger.error("Message was not sent. Error code: " + errorCode);
         }
-    }
-
-    @Scheduled(cron = "0 0/1 * * * *")
-    public void timeMonitor() {
-        List<NotificationEntity> notificationsList = notificationRepository.findAll().stream()
-                .filter(e -> e.getTime().truncatedTo(ChronoUnit.MINUTES).equals(LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES)))
-                .collect(Collectors.toList());
-
-        notificationsList.forEach(e -> {
-            SendResponse result = telegramBot.execute(
-                    new SendMessage(e.getChatId(), e.getMessage()));
-            loggingMessage(result.isOk(), result.errorCode());
-        });
     }
 }
